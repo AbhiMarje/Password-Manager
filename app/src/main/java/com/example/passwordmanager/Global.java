@@ -12,4 +12,8 @@ public class Global {
     public static ArrayList<String> getBytes() {
         return bytes;
     }
+
+    public static void clearBytes() {
+        bytes.clear();
+    }
 }

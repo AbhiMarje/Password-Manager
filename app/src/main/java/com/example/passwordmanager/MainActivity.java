@@ -86,11 +86,13 @@ public class MainActivity extends AppCompatActivity {
                                         Intent intent = new Intent(MainActivity.this, ImageActivity.class);
                                         intent.putExtra("isNewUser", "false");
                                         intent.putExtra("email", email);
+                                        intent.putExtra("domain", domain);
                                         startActivity(intent);
                                     } else {
                                         Intent intent = new Intent(MainActivity.this, RegisterActivity.class);
                                         intent.putExtra("isNewUser", "false");
                                         intent.putExtra("email", email);
+                                        intent.putExtra("domain", domain);
                                         startActivity(intent);
                                     }
 
@@ -98,6 +100,7 @@ public class MainActivity extends AppCompatActivity {
                                     Intent intent = new Intent(MainActivity.this, RegisterActivity.class);
                                     intent.putExtra("isNewUser", "true");
                                     intent.putExtra("email", email);
+                                    intent.putExtra("domain", domain);
                                     startActivity(intent);
                                 }
                             } else {
@@ -138,6 +141,13 @@ public class MainActivity extends AppCompatActivity {
         domainText = findViewById(R.id.domain_et);
         progressBar = findViewById(R.id.ma_progressBar);
 
+        Global.clearBytes();
 
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Global.clearBytes();
     }
 }

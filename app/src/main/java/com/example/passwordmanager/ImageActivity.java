@@ -72,32 +72,61 @@ public class ImageActivity extends AppCompatActivity {
         app = new App(new AppConfiguration.Builder(app_Id).build());
         User user = app.currentUser();
 
-        if (user != null) {
-            MongoClient client = user.getMongoClient("mongodb-atlas");
-            MongoDatabase database = client.getDatabase("manager");
+        if (extras.getString("isNewUser").equals("true")) {
 
-            RealmResultTask<MongoCursor<Document>> cursor = database.getCollection("images").find().iterator();
-            cursor.getAsync(task -> {
-                if (task.isSuccess()) {
-                    MongoCursor<Document> results = task.get();
-                    while (results.hasNext()) {
-                        Document currentDoc = results.next();
-                        if (currentDoc.getString("pic") != null) {
-                            arrayList.add(currentDoc.getString("pic"));
-                        }else {
-                            Log.e("tag", "Doc empty");
+            if (user != null) {
+                MongoClient client = user.getMongoClient("mongodb-atlas");
+                MongoDatabase database = client.getDatabase("manager");
+
+                RealmResultTask<MongoCursor<Document>> cursor = database.getCollection("images").find().iterator();
+                cursor.getAsync(task -> {
+                    if (task.isSuccess()) {
+                        MongoCursor<Document> results = task.get();
+                        while (results.hasNext()) {
+                            Document currentDoc = results.next();
+                            if (currentDoc.getString("pic") != null) {
+                                arrayList.add(currentDoc.getString("pic"));
+                            } else {
+                                Log.e("tag", "Doc empty");
+                            }
                         }
+                        Collections.shuffle(arrayList);
+                        adapter = new ImageAdapter(arrayList.subList(0, 15), this);
+                        recyclerView.setLayoutManager(new GridLayoutManager(this, 3));
+                        recyclerView.setAdapter(adapter);
+                        adapter.notifyDataSetChanged();
+                        recyclerView.smoothScrollToPosition(0);
                     }
-                    Collections.shuffle(arrayList);
-                    adapter = new ImageAdapter(arrayList.subList(0, 15), this);
-                    recyclerView.setLayoutManager(new GridLayoutManager(this, 3));
-                    recyclerView.setAdapter(adapter);
-                    adapter.notifyDataSetChanged();
-                    recyclerView.smoothScrollToPosition(0);
-                }
-            });
-        } else {
-            Log.e("tag", "user null");
+                });
+            } else {
+                Log.e("tag", "user null");
+            }
+        }else {
+
+            if (user != null) {
+                MongoClient client = user.getMongoClient("mongodb-atlas");
+                MongoDatabase database = client.getDatabase("manager");
+                Document document = new Document().append("email", extras.getString("email"));
+
+                database.getCollection("users").findOne(document).getAsync(task -> {
+                    if (task.isSuccess()) {
+
+                        ArrayList<String> images = new ArrayList<>();
+                        images.addAll((ArrayList<String>) task.get().get(extras.getString("domain")));
+
+                        adapter = new ImageAdapter(images, this);
+                        recyclerView.setLayoutManager(new GridLayoutManager(this, 3));
+                        recyclerView.setAdapter(adapter);
+                        adapter.notifyDataSetChanged();
+                        recyclerView.smoothScrollToPosition(0);
+
+                    }else {
+                        Log.e("tag", "Cant find domain");
+                    }
+                });
+
+            }
+
         }
 
         button.setOnClickListener((View v) -> {
@@ -105,7 +134,6 @@ public class ImageActivity extends AppCompatActivity {
                 getBytes();
             }else {
                 generateFinalHash();
-                Toast.makeText(this, "Done", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -115,13 +143,9 @@ public class ImageActivity extends AppCompatActivity {
 
         if (bytes.size() == 1) {
 
-            byte[] finalByteArray = bytes.get(0);
-
             if (Global.getBytes().size() < 5) {
-                Global.addBytes(Base64.getEncoder().encodeToString(finalByteArray));
-                Log.e("base64", Base64.getEncoder().encodeToString(finalByteArray));
-                for (String base : Global.getBytes()) {
-                    Log.e("base641", base);
+                for (String link : Global.getBytes()) {
+                    Log.e("link", link);
                 }
                 ImageActivity.this.recreate();
             }
@@ -129,15 +153,18 @@ public class ImageActivity extends AppCompatActivity {
         }
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
     private void generateFinalHash() {
 
         if (Global.getBytes().size() == 5) {
 
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            ArrayList<String> hashValues = new ArrayList<>();
 
-            for (String base : Global.getBytes()) {
+            for (String link : Global.getBytes()) {
                 try {
-                    byteArrayOutputStream.write(base.getBytes());
+                    byteArrayOutputStream.write(link.getBytes());
+                    hashValues.add(link);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -149,6 +176,27 @@ public class ImageActivity extends AppCompatActivity {
                 byte[] hash = messageDigest.digest(finalByteArray);
 
                 Log.e("hash", Arrays.toString(hash));
+
+                hashValues.add(Base64.getEncoder().encodeToString(hash));
+
+                User user = app.currentUser();
+                MongoClient client = user.getMongoClient("mongodb-atlas");
+                MongoDatabase database = client.getDatabase("manager");
+                Bundle extras = getIntent().getExtras();
+                Document document = new Document().append("email", extras.getString("email"));
+                Document update = new Document("$set", new Document(extras.getString("domain"), hashValues));
+
+                database.getCollection("users").updateOne(document, update).getAsync(task -> {
+                    if (task.isSuccess()) {
+                        long count = task.get().getModifiedCount();
+                        if (count == 1) {
+                            Toast.makeText(this, "Updated", Toast.LENGTH_SHORT).show();
+                        }else {
+                            Toast.makeText(this, "Failed try again", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+
 
             } catch (NoSuchAlgorithmException e) {
                 e.printStackTrace();
@@ -173,6 +221,7 @@ public class ImageActivity extends AppCompatActivity {
                     bytes.add(bytes1);
 
                     if (bytes.size() == 1) {
+                        Global.addBytes(selected.get(0));
                         ImageActivity.this.runOnUiThread(this::createHash);
                     }
                 } catch (ExecutionException | InterruptedException e) {

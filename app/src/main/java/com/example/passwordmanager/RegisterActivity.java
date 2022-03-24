@@ -102,6 +102,7 @@ public class RegisterActivity extends AppCompatActivity {
                             Intent intent = new Intent(RegisterActivity.this, ImageActivity.class);
                             intent.putExtra("isNewUser", "true");
                             intent.putExtra("email", mEmail);
+                            intent.putExtra("domain", mDomain);
                             startActivity(intent);
                         } else {
                             progressBar.setVisibility(View.GONE);
@@ -143,8 +144,9 @@ public class RegisterActivity extends AppCompatActivity {
                                     long count = task1.get().getModifiedCount();
                                     if (count == 1) {
                                         Intent intent = new Intent(RegisterActivity.this, ImageActivity.class);
-                                        intent.putExtra("isNewUser", "false");
+                                        intent.putExtra("isNewUser", "true");
                                         intent.putExtra("email", extras.getString("email"));
+                                        intent.putExtra("domain", mDomain);
                                         startActivity(intent);
                                     }else {
                                         Toast.makeText(this, "Failed to update", Toast.LENGTH_SHORT).show();
@@ -182,5 +184,13 @@ public class RegisterActivity extends AppCompatActivity {
 
         progressBar.setVisibility(View.GONE);
 
+        Global.clearBytes();
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Global.clearBytes();
     }
 }
