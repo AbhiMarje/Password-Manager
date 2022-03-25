@@ -109,7 +109,7 @@ public class ImageActivity extends AppCompatActivity {
             } else {
                 Log.e("tag", "user null");
             }
-        }else {
+        } else {
 
             if (user != null) {
                 MongoClient client = user.getMongoClient("mongodb-atlas");
@@ -137,9 +137,9 @@ public class ImageActivity extends AppCompatActivity {
                                 Collections.shuffle(arrayList);
 
                                 ArrayList newImages;
-                                if (arrayList.subList(0,15).contains(images.get(Global.getLinks().size()))) {
+                                if (arrayList.subList(0, 15).contains(images.get(Global.getLinks().size()))) {
                                     newImages = new ArrayList<>(arrayList.subList(0, 15));
-                                }else {
+                                } else {
                                     newImages = new ArrayList<>(arrayList.subList(0, 14));
                                     newImages.add(images.get(Global.getLinks().size()));
                                 }
@@ -154,7 +154,7 @@ public class ImageActivity extends AppCompatActivity {
                             }
                         });
 
-                    }else {
+                    } else {
                         Log.e("tag", "Cant find domain");
                     }
                 });
@@ -167,13 +167,13 @@ public class ImageActivity extends AppCompatActivity {
             if (Global.getBytes().size() < 5) {
                 if (extras.getString("isNewUser").equals("true")) {
                     getBytes();
-                }else {
+                } else {
                     checkBytes();
                 }
-            }else {
+            } else {
                 if (extras.getString("isNewUser").equals("true")) {
                     generateFinalHash();
-                }else {
+                } else {
                     showResult();
                 }
             }
@@ -203,7 +203,7 @@ public class ImageActivity extends AppCompatActivity {
 
                 if (images.get(5).equals(Base64.getEncoder().encodeToString(hash))) {
                     Log.e("tag", "Correct");
-                }else {
+                } else {
                     Log.e("tag", "not Correct");
                 }
 
@@ -211,7 +211,7 @@ public class ImageActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
 
-        }else {
+        } else {
             Log.e("Error", "bytes not found");
         }
 
@@ -225,26 +225,25 @@ public class ImageActivity extends AppCompatActivity {
 
         if (Global.getBytes().size() < 5) {
             Log.e("image", images.get(Global.getBytes().size()));
-            if (selected.get(0).equals(images.get(Global.getBytes().size()))) {
-                Global.addLink(selected.get(0));
 
+            Global.addLink(selected.get(0));
 
-                    Runnable runnable = () -> {
-                        try {
-                             Global.addBytes(Glide.with(this).as(byte[].class).load(selected.get(0)).submit().get());
-                             for (byte[] bytes : Global.getBytes()) {
-                                 Log.e("bytes", Arrays.toString(bytes));
-                             }
-                            ImageActivity.this.runOnUiThread(this::update);
+            Runnable runnable = () -> {
+                try {
+                    Global.addBytes(Glide.with(this).as(byte[].class).load(selected.get(0)).submit().get());
+                    for (byte[] bytes : Global.getBytes()) {
+                        Log.e("bytes", Arrays.toString(bytes));
+                    }
 
-                        }catch (ExecutionException | InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                    };
-                    new Thread(runnable).start();
+                    ImageActivity.this.runOnUiThread(this::update);
 
-            }
-        }else if (Global.getBytes().size() == 5){
+                } catch (ExecutionException | InterruptedException e) {
+                    e.printStackTrace();
+                }
+            };
+            new Thread(runnable).start();
+
+        } else if (Global.getBytes().size() == 5) {
             selectedImageCount.setText(String.valueOf(Global.getBytes().size()));
             button.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_baseline_check_24));
         }
@@ -252,8 +251,13 @@ public class ImageActivity extends AppCompatActivity {
     }
 
     private void update() {
-        selectedImageCount.setText(String.valueOf(Global.getBytes().size()));
-        ImageActivity.this.recreate();
+        if (Global.getBytes().size() != 5) {
+            selectedImageCount.setText(String.valueOf(Global.getBytes().size()));
+            ImageActivity.this.recreate();
+        }else {
+            selectedImageCount.setText(String.valueOf(Global.getBytes().size()));
+            button.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_baseline_check_24));
+        }
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -266,7 +270,7 @@ public class ImageActivity extends AppCompatActivity {
                     Log.e("link", link);
                 }
                 ImageActivity.this.recreate();
-            }else if (Global.getLinks().size() == 5) {
+            } else if (Global.getLinks().size() == 5) {
                 selectedImageCount.setText(String.valueOf(Global.getLinks().size()));
                 button.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_baseline_check_24));
             }
@@ -317,7 +321,7 @@ public class ImageActivity extends AppCompatActivity {
                         long count = task.get().getModifiedCount();
                         if (count == 1) {
                             Toast.makeText(this, "Updated", Toast.LENGTH_SHORT).show();
-                        }else {
+                        } else {
                             Toast.makeText(this, "Failed try again", Toast.LENGTH_SHORT).show();
                         }
                     }
