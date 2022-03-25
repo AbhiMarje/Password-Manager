@@ -185,6 +185,7 @@ public class RegisterActivity extends AppCompatActivity {
         progressBar.setVisibility(View.GONE);
 
         Global.clearBytes();
+        Global.clearLinks();
 
     }
 
@@ -192,5 +193,6 @@ public class RegisterActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         Global.clearBytes();
+        Global.clearLinks();
     }
 }

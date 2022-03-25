@@ -1,10 +1,17 @@
 package com.example.passwordmanager;
 
+import static java.security.AccessController.getContext;
+
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.annotation.SuppressLint;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -16,6 +23,7 @@ import android.widget.Toast;
 import com.bumptech.glide.Glide;
 import com.example.passwordmanager.Adapter.ImageAdapter;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import org.bson.Document;
 
@@ -40,14 +48,14 @@ import io.realm.mongodb.mongo.iterable.MongoCursor;
 public class ImageActivity extends AppCompatActivity {
 
     String app_Id = "password-manager-izhmp";
-    String isNewUser = "";
     ArrayList<String> arrayList;
     RecyclerView recyclerView;
     ImageAdapter adapter;
-    MaterialButton button;
+    FloatingActionButton button;
     ProgressBar progressBar;
     TextView selectedImageCount;
     ArrayList<byte[]> bytes;
+    ArrayList<String> images;
     App app;
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -111,14 +119,40 @@ public class ImageActivity extends AppCompatActivity {
                 database.getCollection("users").findOne(document).getAsync(task -> {
                     if (task.isSuccess()) {
 
-                        ArrayList<String> images = new ArrayList<>();
+                        images = new ArrayList<>();
                         images.addAll((ArrayList<String>) task.get().get(extras.getString("domain")));
 
-                        adapter = new ImageAdapter(images, this);
-                        recyclerView.setLayoutManager(new GridLayoutManager(this, 3));
-                        recyclerView.setAdapter(adapter);
-                        adapter.notifyDataSetChanged();
-                        recyclerView.smoothScrollToPosition(0);
+                        RealmResultTask<MongoCursor<Document>> cursor = database.getCollection("images").find().iterator();
+                        cursor.getAsync(task1 -> {
+                            if (task1.isSuccess()) {
+                                MongoCursor<Document> results = task1.get();
+                                while (results.hasNext()) {
+                                    Document currentDoc = results.next();
+                                    if (currentDoc.getString("pic") != null) {
+                                        arrayList.add(currentDoc.getString("pic"));
+                                    } else {
+                                        Log.e("tag", "Doc empty");
+                                    }
+                                }
+                                Collections.shuffle(arrayList);
+
+                                ArrayList newImages;
+                                if (arrayList.subList(0,15).contains(images.get(Global.getLinks().size()))) {
+                                    newImages = new ArrayList<>(arrayList.subList(0, 15));
+                                }else {
+                                    newImages = new ArrayList<>(arrayList.subList(0, 14));
+                                    newImages.add(images.get(Global.getLinks().size()));
+                                }
+
+                                Collections.shuffle(newImages);
+
+                                adapter = new ImageAdapter(newImages, this);
+                                recyclerView.setLayoutManager(new GridLayoutManager(this, 3));
+                                recyclerView.setAdapter(adapter);
+                                adapter.notifyDataSetChanged();
+                                recyclerView.smoothScrollToPosition(0);
+                            }
+                        });
 
                     }else {
                         Log.e("tag", "Cant find domain");
@@ -131,11 +165,95 @@ public class ImageActivity extends AppCompatActivity {
 
         button.setOnClickListener((View v) -> {
             if (Global.getBytes().size() < 5) {
-                getBytes();
+                if (extras.getString("isNewUser").equals("true")) {
+                    getBytes();
+                }else {
+                    checkBytes();
+                }
             }else {
-                generateFinalHash();
+                if (extras.getString("isNewUser").equals("true")) {
+                    generateFinalHash();
+                }else {
+                    showResult();
+                }
             }
         });
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private void showResult() {
+
+        if (Global.getBytes().size() == 5) {
+
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+
+            for (byte[] bytes : Global.getBytes()) {
+
+                try {
+                    byteArrayOutputStream.write(bytes);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            try {
+                byte[] finalByteArray = byteArrayOutputStream.toByteArray();
+                MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+                byte[] hash = messageDigest.digest(finalByteArray);
+
+                if (images.get(5).equals(Base64.getEncoder().encodeToString(hash))) {
+                    Log.e("tag", "Correct");
+                }else {
+                    Log.e("tag", "not Correct");
+                }
+
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            }
+
+        }else {
+            Log.e("Error", "bytes not found");
+        }
+
+    }
+
+    private void checkBytes() {
+
+        Log.e("tag", "clicked");
+
+        ArrayList<String> selected = adapter.getSelected();
+
+        if (Global.getBytes().size() < 5) {
+            Log.e("image", images.get(Global.getBytes().size()));
+            if (selected.get(0).equals(images.get(Global.getBytes().size()))) {
+                Global.addLink(selected.get(0));
+
+
+                    Runnable runnable = () -> {
+                        try {
+                             Global.addBytes(Glide.with(this).as(byte[].class).load(selected.get(0)).submit().get());
+                             for (byte[] bytes : Global.getBytes()) {
+                                 Log.e("bytes", Arrays.toString(bytes));
+                             }
+                            ImageActivity.this.runOnUiThread(this::update);
+
+                        }catch (ExecutionException | InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    };
+                    new Thread(runnable).start();
+
+            }
+        }else if (Global.getBytes().size() == 5){
+            selectedImageCount.setText(String.valueOf(Global.getBytes().size()));
+            button.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_baseline_check_24));
+        }
+
+    }
+
+    private void update() {
+        selectedImageCount.setText(String.valueOf(Global.getBytes().size()));
+        ImageActivity.this.recreate();
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -143,11 +261,14 @@ public class ImageActivity extends AppCompatActivity {
 
         if (bytes.size() == 1) {
 
-            if (Global.getBytes().size() < 5) {
-                for (String link : Global.getBytes()) {
+            if (Global.getLinks().size() < 5) {
+                for (String link : Global.getLinks()) {
                     Log.e("link", link);
                 }
                 ImageActivity.this.recreate();
+            }else if (Global.getLinks().size() == 5) {
+                selectedImageCount.setText(String.valueOf(Global.getLinks().size()));
+                button.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_baseline_check_24));
             }
 
         }
@@ -161,13 +282,18 @@ public class ImageActivity extends AppCompatActivity {
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
             ArrayList<String> hashValues = new ArrayList<>();
 
-            for (String link : Global.getBytes()) {
+            for (byte[] bytes : Global.getBytes()) {
                 try {
-                    byteArrayOutputStream.write(link.getBytes());
-                    hashValues.add(link);
+                    byteArrayOutputStream.write(bytes);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
+            }
+
+            for (String link : Global.getLinks()) {
+
+                hashValues.add(link);
+
             }
 
             try {
@@ -207,7 +333,6 @@ public class ImageActivity extends AppCompatActivity {
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     private void getBytes() {
-        Log.e("tag", "clicked");
         progressBar.setVisibility(View.VISIBLE);
         ArrayList<String> selected = adapter.getSelected();
         Log.e("tag", selected.toString());
@@ -218,10 +343,15 @@ public class ImageActivity extends AppCompatActivity {
             Runnable runnable = () -> {
                 try {
                     byte[] bytes1 = Glide.with(ImageActivity.this).as(byte[].class).load(selected.get(0)).submit().get();
+                    Global.addBytes(bytes1);
                     bytes.add(bytes1);
 
+                    for (byte[] bytes : Global.getBytes()) {
+                        Log.e("byte", Arrays.toString(bytes));
+                    }
+
                     if (bytes.size() == 1) {
-                        Global.addBytes(selected.get(0));
+                        Global.addLink(selected.get(0));
                         ImageActivity.this.runOnUiThread(this::createHash);
                     }
                 } catch (ExecutionException | InterruptedException e) {

@@ -142,6 +142,7 @@ public class MainActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.ma_progressBar);
 
         Global.clearBytes();
+        Global.clearLinks();
 
     }
 
@@ -149,5 +150,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         Global.clearBytes();
+        Global.clearLinks();
     }
 }
