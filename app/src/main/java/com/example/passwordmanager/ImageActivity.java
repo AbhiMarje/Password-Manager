@@ -1,17 +1,12 @@
 package com.example.passwordmanager;
 
-import static java.security.AccessController.getContext;
-
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.annotation.SuppressLint;
-import android.content.res.ColorStateList;
-import android.graphics.Color;
-import android.graphics.drawable.Drawable;
+import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -19,14 +14,10 @@ import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import com.bumptech.glide.Glide;
 import com.example.passwordmanager.Adapter.ImageAdapter;
-import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-
 import org.bson.Document;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.security.MessageDigest;
@@ -36,7 +27,6 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.concurrent.ExecutionException;
-
 import io.realm.mongodb.App;
 import io.realm.mongodb.AppConfiguration;
 import io.realm.mongodb.RealmResultTask;
@@ -136,7 +126,7 @@ public class ImageActivity extends AppCompatActivity {
                                 }
                                 Collections.shuffle(arrayList);
 
-                                ArrayList newImages;
+                                ArrayList<String> newImages;
                                 if (arrayList.subList(0, 15).contains(images.get(Global.getLinks().size()))) {
                                     newImages = new ArrayList<>(arrayList.subList(0, 15));
                                 } else {
@@ -203,6 +193,8 @@ public class ImageActivity extends AppCompatActivity {
 
                 if (images.get(5).equals(Base64.getEncoder().encodeToString(hash))) {
                     Log.e("tag", "Correct");
+                    Intent intent = new Intent(ImageActivity.this, HomeActivity.class);
+                    startActivity(intent);
                 } else {
                     Log.e("tag", "not Correct");
                 }
@@ -284,7 +276,6 @@ public class ImageActivity extends AppCompatActivity {
         if (Global.getBytes().size() == 5) {
 
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            ArrayList<String> hashValues = new ArrayList<>();
 
             for (byte[] bytes : Global.getBytes()) {
                 try {
@@ -294,11 +285,7 @@ public class ImageActivity extends AppCompatActivity {
                 }
             }
 
-            for (String link : Global.getLinks()) {
-
-                hashValues.add(link);
-
-            }
+            ArrayList<String> hashValues = new ArrayList<>(Global.getLinks());
 
             try {
                 byte[] finalByteArray = byteArrayOutputStream.toByteArray();
@@ -321,6 +308,8 @@ public class ImageActivity extends AppCompatActivity {
                         long count = task.get().getModifiedCount();
                         if (count == 1) {
                             Toast.makeText(this, "Updated", Toast.LENGTH_SHORT).show();
+                            Intent intent = new Intent(ImageActivity.this, HomeActivity.class);
+                            startActivity(intent);
                         } else {
                             Toast.makeText(this, "Failed try again", Toast.LENGTH_SHORT).show();
                         }
