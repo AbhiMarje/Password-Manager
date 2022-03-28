@@ -143,6 +143,7 @@ public class MainActivity extends AppCompatActivity {
 
         Global.clearBytes();
         Global.clearLinks();
+        Global.makeAutoFillTrue();
 
     }
 
@@ -151,5 +152,6 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         Global.clearBytes();
         Global.clearLinks();
+        Global.makeAutoFillTrue();
     }
 }

@@ -30,4 +30,12 @@ public class Global {
     public static void clearLinks() {
         links.clear();
     }
+
+    public static boolean isAutoFill = true;
+    public static void makeAutoFillFalse() {
+        isAutoFill = false;
+    }
+    public static void makeAutoFillTrue() {
+        isAutoFill = true;
+    }
 }

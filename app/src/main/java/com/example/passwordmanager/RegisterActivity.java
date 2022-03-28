@@ -186,6 +186,7 @@ public class RegisterActivity extends AppCompatActivity {
 
         Global.clearBytes();
         Global.clearLinks();
+        Global.makeAutoFillTrue();
 
     }
 
@@ -194,5 +195,6 @@ public class RegisterActivity extends AppCompatActivity {
         super.onResume();
         Global.clearBytes();
         Global.clearLinks();
+        Global.makeAutoFillTrue();
     }
 }

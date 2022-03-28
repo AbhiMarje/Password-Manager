@@ -7,9 +7,11 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -34,6 +36,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
@@ -43,6 +46,14 @@ import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.SecretKeySpec;
+import javax.mail.Authenticator;
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 
 import io.realm.mongodb.App;
 import io.realm.mongodb.AppConfiguration;
@@ -60,11 +71,12 @@ public class ImageActivity extends AppCompatActivity {
     ImageAdapter adapter;
     FloatingActionButton button;
     ProgressBar progressBar;
-    TextView selectedImageCount;
+    TextView selectedImageCount, forgetPassword;
     ArrayList<byte[]> bytes;
     ArrayList<String> images;
     App app;
     byte[] key = {59, -1, -22, 15, 7, 69, -21, -13, 44, -9, 56, 105, -82, 44, -23, 80};
+    int randomPin;
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
@@ -102,6 +114,7 @@ public class ImageActivity extends AppCompatActivity {
                             Document currentDoc = results.next();
                             if (currentDoc.getString("pic") != null) {
                                 arrayList.add(currentDoc.getString("pic"));
+                                Log.e("tag", arrayList.toString());
                             } else {
                                 Log.e("tag", "Doc empty");
                             }
@@ -177,70 +190,69 @@ public class ImageActivity extends AppCompatActivity {
                                 adapter.notifyDataSetChanged();
                                 recyclerView.smoothScrollToPosition(0);
 
-//                                SharedPreferences sharedPreferences = getSharedPreferences("MySharedPref", MODE_PRIVATE);
-//
-//                                Set<HashMap<String, Set<HashMap<String, String>>>> getSet = new HashSet<>();
-//                                getSet.addAll(sharedPreferences.getStringSet("domain", (HashSet) new HashSet<HashMap<String, Set<HashMap<String, String>>>>()));
-//                                Log.e("stored", getSet.toString());
-//
-//                                try {
-//                                    SecretKeySpec keySpec = new SecretKeySpec(key, "AES");
-//                                    Cipher cipher = Cipher.getInstance("AES");
-//                                    cipher.init(Cipher.DECRYPT_MODE, keySpec);
-//
-//                                    for (HashMap<String, Set<HashMap<String, String>>> hashMap : getSet) {
-//                                        for (Map.Entry<String, Set<HashMap<String, String>>> set1 : hashMap.entrySet()) {
-//                                            if (set1.getKey().equals(extras.getString("email"))) {
-//
-//                                                for (HashMap<String, String> map2 : set1.getValue()) {
-//                                                    for (Map.Entry<String, String> map3 : map2.entrySet()) {
-//
-//                                                        Log.e("tag", "came to loop" + " " + map3.getKey() + " " + extras.getString("domain"));
-//                                                        if (map3.getKey().equals(extras.getString("domain"))) {
-//
-//                                                            Log.e("tag", "Came here");
-//
-//                                                            AlertDialog.Builder alertDialog = new AlertDialog.Builder(ImageActivity.this);
-//                                                            alertDialog.setMessage("Do you want to Autofill the password")
-//                                                                    .setCancelable(false)
-//                                                                    .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-//                                                                        @Override
-//                                                                        public void onClick(DialogInterface dialogInterface, int i) {
-//
-//                                                                            try {
-//                                                                                if (images.get(6).equals(Base64.getEncoder().encodeToString(cipher.doFinal(Base64.getDecoder().decode(map3.getValue()))))) {
-//                                                                                    Intent intent = new Intent(ImageActivity.this, HomeActivity.class);
-//                                                                                    startActivity(intent);
-//                                                                                }
-//                                                                            } catch (BadPaddingException | IllegalBlockSizeException e) {
-//                                                                                e.printStackTrace();
-//                                                                            }
-//
-//                                                                        }
-//                                                                    }).setNegativeButton("No", new DialogInterface.OnClickListener() {
-//                                                                        @Override
-//                                                                        public void onClick(DialogInterface dialogInterface, int i) {
-//
-//                                                                            Toast.makeText(ImageActivity.this, "Do it yourself", Toast.LENGTH_SHORT).show();
-//
-//                                                                        }
-//                                                                    });
-//
-//                                                            AlertDialog alert = alertDialog.create();
-//                                                            alert.setTitle("AlertDialogExample");
-//                                                            alert.show();
-//                                                            Log.e("Hash", set1.getKey() + "  " + Base64.getEncoder().encodeToString(cipher.doFinal(Base64.getDecoder().decode(map3.getValue()))));
-//                                                        }
-//                                                    }
-//                                                }
-//                                            }
-//                                        }
-//                                    }
-//
-//                                } catch (NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
-//                                    e.printStackTrace();
-//                                }
-//
+                                SharedPreferences sharedPreferences = getSharedPreferences("MySharedPref", MODE_PRIVATE);
+
+                                if (Global.isAutoFill) {
+                                    try {
+                                        SecretKeySpec keySpec = new SecretKeySpec(key, "AES");
+                                        Cipher cipher = Cipher.getInstance("AES");
+                                        cipher.init(Cipher.DECRYPT_MODE, keySpec);
+
+                                        Set<HashMap<String, HashMap<String, String>>> mainSet = new HashSet<>(sharedPreferences.getStringSet("domain", (HashSet) new HashSet<>()));
+
+                                        for (HashMap<String, HashMap<String, String>> map1 : mainSet) {
+
+                                            for (Map.Entry<String, HashMap<String, String>> map2 : map1.entrySet()) {
+
+                                                if (map2.getKey().equals(extras.getString("email"))) {
+
+                                                    for (Map.Entry<String, String> map3 : map2.getValue().entrySet()) {
+
+                                                        if (map3.getKey().equals(extras.getString("domain"))) {
+                                                            Log.e("hash2", Base64.getEncoder().encodeToString(cipher.doFinal(Base64.getDecoder().decode(map3.getValue()))));
+                                                            Log.e("hash2", images.get(6));
+
+                                                            AlertDialog.Builder alertDialog = new AlertDialog.Builder(ImageActivity.this);
+                                                            alertDialog.setMessage("Do you want to Autofill the password")
+                                                                    .setCancelable(false)
+                                                                    .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                                                                        @Override
+                                                                        public void onClick(DialogInterface dialogInterface, int i) {
+
+                                                                            try {
+                                                                                if (images.get(6).equals(Base64.getEncoder().encodeToString(cipher.doFinal(Base64.getDecoder().decode(map3.getValue()))))) {
+                                                                                    Intent intent = new Intent(ImageActivity.this, HomeActivity.class);
+                                                                                    startActivity(intent);
+                                                                                }else {
+                                                                                    Global.makeAutoFillFalse();
+                                                                                }
+                                                                            } catch (BadPaddingException | IllegalBlockSizeException e) {
+                                                                                e.printStackTrace();
+                                                                            }
+
+                                                                        }
+                                                                    }).setNegativeButton("No", new DialogInterface.OnClickListener() {
+                                                                @Override
+                                                                public void onClick(DialogInterface dialogInterface, int i) {
+
+                                                                    Global.makeAutoFillFalse();
+                                                                    Toast.makeText(ImageActivity.this, "Please select the images", Toast.LENGTH_SHORT).show();
+
+                                                                }
+                                                            });
+
+                                                            AlertDialog alert = alertDialog.create();
+                                                            alert.show();
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    } catch (NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+
                             }
                         });
 
@@ -268,6 +280,80 @@ public class ImageActivity extends AppCompatActivity {
                 }
             }
         });
+
+        forgetPassword.setOnClickListener((View v) -> {
+            String email = "2gi19ec067@students.git.edu";
+            String password = "345@hb345@hb";
+
+            Properties properties = new Properties();
+            properties.put("mail.smtp.auth", "true");
+            properties.put("mail.smtp.starttls.enable", "true");
+            properties.put("mail.smtp.host", "smtp.gmail.com");
+            properties.put("mail.smtp.port", "587");
+
+            Session session = Session.getInstance(properties, new Authenticator() {
+                @Override
+                protected PasswordAuthentication getPasswordAuthentication() {
+                    return new PasswordAuthentication(email, password);
+                }
+            });
+
+            try {
+                randomPin = (int) (Math.random()*9000)+1000;
+                Message message = new MimeMessage(session);
+                message.setFrom(new InternetAddress(email));
+                message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(extras.getString("email", "")));
+                message.setSubject("Password reset");
+                message.setText("Your otp is " + String.valueOf(randomPin));
+                new SendMail().execute(message);
+
+            } catch (MessagingException e) {
+                e.printStackTrace();
+            }
+
+        });
+
+    }
+
+    private class SendMail extends AsyncTask<Message, String, String> {
+
+        private ProgressDialog progressDialog;
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+
+            progressDialog = ProgressDialog.show(ImageActivity.this, "Please Wait", "Sending OTP...", true, false);
+
+        }
+
+        @Override
+        protected String doInBackground(Message... messages) {
+            try {
+                Transport.send(messages[0]);
+                return "Success";
+            } catch (MessagingException e) {
+                e.printStackTrace();
+                return "Error";
+            }
+        }
+
+        @Override
+        protected void onPostExecute(String s) {
+            super.onPostExecute(s);
+            progressDialog.dismiss();
+            if (s.equals("Success")) {
+                Bundle bundle = getIntent().getExtras();
+
+                Intent intent = new Intent(ImageActivity.this, OTPActivity.class);
+                intent.putExtra("otp", String.valueOf(randomPin));
+                intent.putExtra("email", bundle.getString("email", ""));
+                intent.putExtra("domain", bundle.getString("domain", ""));
+                startActivity(intent);
+            }else {
+                Toast.makeText(ImageActivity.this, "Something went wrong", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -292,6 +378,87 @@ public class ImageActivity extends AppCompatActivity {
                 byte[] hash = messageDigest.digest(finalByteArray);
 
                 if (images.get(6).equals(Base64.getEncoder().encodeToString(hash))) {
+
+                    Bundle bundle = getIntent().getExtras();
+
+                    try {
+
+                        Log.e("hash", Base64.getEncoder().encodeToString(hash));
+
+                        SecretKeySpec keySpec = new SecretKeySpec(key, "AES");
+                        Cipher cipher = Cipher.getInstance("AES");
+                        cipher.init(Cipher.ENCRYPT_MODE, keySpec);
+
+                        Cipher decipher = Cipher.getInstance("AES");
+                        decipher.init(Cipher.DECRYPT_MODE, keySpec);
+
+                        SharedPreferences sh = getSharedPreferences("MySharedPref", MODE_PRIVATE);
+                        SharedPreferences sharedPreferences = getSharedPreferences("MySharedPref", MODE_PRIVATE);
+                        SharedPreferences.Editor editor = sharedPreferences.edit();
+
+                        Set<HashMap<String, HashMap<String, String>>> mainSet = new HashSet<>(sh.getStringSet("domain", (HashSet) new HashSet<>()));
+                        Log.e("data", mainSet.toString());
+
+                        HashMap<String, String> childMap = new HashMap<>();
+
+                        if (mainSet.size() == 0) {
+                            Set<HashMap<String, HashMap<String, String>>> pushSet = new HashSet<>();
+                            HashMap<String, HashMap<String, String>> newMap = new HashMap<>();
+                            childMap.put(bundle.getString("domain"), Base64.getEncoder().encodeToString(cipher.doFinal(hash)));
+                            newMap.put(bundle.getString("email"), childMap);
+                            pushSet.add(newMap);
+                            editor.putStringSet("domain", (HashSet) pushSet);
+                            editor.apply();
+                        }
+
+                        for (HashMap<String, HashMap<String, String>> map1 : mainSet) {
+                            boolean isNewUser = true;
+                            for (Map.Entry<String, HashMap<String, String>> map2 : map1.entrySet()) {
+
+                                if (map2.getKey().equals(bundle.getString("email"))) {
+                                    isNewUser = false;
+                                    boolean isNewDomain = true;
+                                    for (Map.Entry<String, String> map3 : map2.getValue().entrySet()) {
+                                        childMap.put(map3.getKey(), map3.getValue());
+                                        if (map3.getKey().equals(bundle.getString("domain"))) {
+                                            if (bundle.getString("isReset","").equals("true")) {
+                                                isNewDomain = true;
+                                            }else {
+                                                isNewDomain = false;
+                                            }
+                                            Log.e("hash2", Base64.getEncoder().encodeToString(decipher.doFinal(Base64.getDecoder().decode(map3.getValue()))));
+                                        }
+                                    }
+
+                                    if (isNewDomain) {
+                                        Set<HashMap<String, HashMap<String, String>>> pushSet = new HashSet<>();
+                                        HashMap<String, HashMap<String, String>> newMap = new HashMap<>();
+                                        childMap.put(bundle.getString("domain"), Base64.getEncoder().encodeToString(cipher.doFinal(hash)));
+                                        newMap.put(bundle.getString("email"), childMap);
+                                        pushSet.add(newMap);
+                                        editor.putStringSet("domain", (HashSet) pushSet);
+                                        editor.apply();
+                                    }
+                                }
+                            }
+                            if (isNewUser) {
+                                Set<HashMap<String, HashMap<String, String>>> pushSet = new HashSet<>();
+                                HashMap<String, HashMap<String, String>> newMap = new HashMap<>();
+                                childMap.put(bundle.getString("domain"), Base64.getEncoder().encodeToString(cipher.doFinal(hash)));
+                                newMap.put(bundle.getString("email"), childMap);
+                                pushSet.add(newMap);
+                                editor.putStringSet("domain", (HashSet) pushSet);
+                                editor.apply();
+                            }
+
+                        }
+
+                        Log.e("data2", sh.getStringSet("domain", new HashSet<>()).toString());
+
+
+                    } catch (NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e) {
+                        e.printStackTrace();
+                    }
 
 //                    Bundle bundle = getIntent().getExtras();
 //
@@ -484,6 +651,88 @@ public class ImageActivity extends AppCompatActivity {
                     }
                 });
 
+                Bundle bundle = getIntent().getExtras();
+
+                if (bundle.getString("isReset", "").equals("true")) {
+                    try {
+
+                        Log.e("hash", Base64.getEncoder().encodeToString(hash));
+
+                        SecretKeySpec keySpec = new SecretKeySpec(key, "AES");
+                        Cipher cipher = Cipher.getInstance("AES");
+                        cipher.init(Cipher.ENCRYPT_MODE, keySpec);
+
+                        Cipher decipher = Cipher.getInstance("AES");
+                        decipher.init(Cipher.DECRYPT_MODE, keySpec);
+
+                        SharedPreferences sh = getSharedPreferences("MySharedPref", MODE_PRIVATE);
+                        SharedPreferences sharedPreferences = getSharedPreferences("MySharedPref", MODE_PRIVATE);
+                        SharedPreferences.Editor editor = sharedPreferences.edit();
+
+                        Set<HashMap<String, HashMap<String, String>>> mainSet = new HashSet<>(sh.getStringSet("domain", (HashSet) new HashSet<>()));
+                        Log.e("data", mainSet.toString());
+
+                        HashMap<String, String> childMap = new HashMap<>();
+
+                        if (mainSet.size() == 0) {
+                            Set<HashMap<String, HashMap<String, String>>> pushSet = new HashSet<>();
+                            HashMap<String, HashMap<String, String>> newMap = new HashMap<>();
+                            childMap.put(bundle.getString("domain"), Base64.getEncoder().encodeToString(cipher.doFinal(hash)));
+                            newMap.put(bundle.getString("email"), childMap);
+                            pushSet.add(newMap);
+                            editor.putStringSet("domain", (HashSet) pushSet);
+                            editor.apply();
+                        }
+
+                        for (HashMap<String, HashMap<String, String>> map1 : mainSet) {
+                            boolean isNewUser = true;
+                            for (Map.Entry<String, HashMap<String, String>> map2 : map1.entrySet()) {
+
+                                if (map2.getKey().equals(bundle.getString("email"))) {
+                                    isNewUser = false;
+                                    boolean isNewDomain = true;
+                                    for (Map.Entry<String, String> map3 : map2.getValue().entrySet()) {
+                                        childMap.put(map3.getKey(), map3.getValue());
+                                        if (map3.getKey().equals(bundle.getString("domain"))) {
+                                            if (bundle.getString("isReset", "").equals("true")) {
+                                                isNewDomain = true;
+                                            } else {
+                                                isNewDomain = false;
+                                            }
+                                            Log.e("hash2", Base64.getEncoder().encodeToString(decipher.doFinal(Base64.getDecoder().decode(map3.getValue()))));
+                                        }
+                                    }
+
+                                    if (isNewDomain) {
+                                        Set<HashMap<String, HashMap<String, String>>> pushSet = new HashSet<>();
+                                        HashMap<String, HashMap<String, String>> newMap = new HashMap<>();
+                                        childMap.put(bundle.getString("domain"), Base64.getEncoder().encodeToString(cipher.doFinal(hash)));
+                                        newMap.put(bundle.getString("email"), childMap);
+                                        pushSet.add(newMap);
+                                        editor.putStringSet("domain", (HashSet) pushSet);
+                                        editor.apply();
+                                    }
+                                }
+                            }
+                            if (isNewUser) {
+                                Set<HashMap<String, HashMap<String, String>>> pushSet = new HashSet<>();
+                                HashMap<String, HashMap<String, String>> newMap = new HashMap<>();
+                                childMap.put(bundle.getString("domain"), Base64.getEncoder().encodeToString(cipher.doFinal(hash)));
+                                newMap.put(bundle.getString("email"), childMap);
+                                pushSet.add(newMap);
+                                editor.putStringSet("domain", (HashSet) pushSet);
+                                editor.apply();
+                            }
+
+                        }
+
+                        Log.e("data2", sh.getStringSet("domain", new HashSet<>()).toString());
+
+
+                    } catch (NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e) {
+                        e.printStackTrace();
+                    }
+                }
 
             } catch (NoSuchAlgorithmException e) {
                 e.printStackTrace();
@@ -543,6 +792,7 @@ public class ImageActivity extends AppCompatActivity {
         button = findViewById(R.id.img_next_btn);
         progressBar = findViewById(R.id.img_progressBar);
         selectedImageCount = findViewById(R.id.selectedImages);
+        forgetPassword = findViewById(R.id.forgetPassword);
 
         progressBar.setVisibility(View.GONE);
 
