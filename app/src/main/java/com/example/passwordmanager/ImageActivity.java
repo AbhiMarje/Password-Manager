@@ -1,12 +1,15 @@
 package com.example.passwordmanager;
 
 import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -20,13 +23,27 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import org.bson.Document;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.spec.SecretKeySpec;
+
 import io.realm.mongodb.App;
 import io.realm.mongodb.AppConfiguration;
 import io.realm.mongodb.RealmResultTask;
@@ -47,6 +64,7 @@ public class ImageActivity extends AppCompatActivity {
     ArrayList<byte[]> bytes;
     ArrayList<String> images;
     App app;
+    byte[] key = {59, -1, -22, 15, 7, 69, -21, -13, 44, -9, 56, 105, -82, 44, -23, 80};
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
@@ -110,7 +128,24 @@ public class ImageActivity extends AppCompatActivity {
                     if (task.isSuccess()) {
 
                         images = new ArrayList<>();
-                        images.addAll((ArrayList<String>) task.get().get(extras.getString("domain")));
+                        ArrayList<String> encoded = new ArrayList<>((ArrayList<String>) task.get().get(extras.getString("domain")));
+
+                        try {
+                            SecretKeySpec keySpec = new SecretKeySpec(key, "AES");
+                            Cipher cipher = Cipher.getInstance("AES");
+                            cipher.init(Cipher.DECRYPT_MODE, keySpec);
+
+                            for (int i = 0; i < encoded.size(); i++) {
+                                if (i == 6) {
+                                    images.add(encoded.get(i));
+                                }else {
+                                    images.add(new String(cipher.doFinal(Base64.getDecoder().decode(encoded.get(i)))));
+                                }
+                            }
+
+                        } catch (NoSuchPaddingException | NoSuchAlgorithmException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e) {
+                            e.printStackTrace();
+                        }
 
                         RealmResultTask<MongoCursor<Document>> cursor = database.getCollection("images").find().iterator();
                         cursor.getAsync(task1 -> {
@@ -141,6 +176,71 @@ public class ImageActivity extends AppCompatActivity {
                                 recyclerView.setAdapter(adapter);
                                 adapter.notifyDataSetChanged();
                                 recyclerView.smoothScrollToPosition(0);
+
+//                                SharedPreferences sharedPreferences = getSharedPreferences("MySharedPref", MODE_PRIVATE);
+//
+//                                Set<HashMap<String, Set<HashMap<String, String>>>> getSet = new HashSet<>();
+//                                getSet.addAll(sharedPreferences.getStringSet("domain", (HashSet) new HashSet<HashMap<String, Set<HashMap<String, String>>>>()));
+//                                Log.e("stored", getSet.toString());
+//
+//                                try {
+//                                    SecretKeySpec keySpec = new SecretKeySpec(key, "AES");
+//                                    Cipher cipher = Cipher.getInstance("AES");
+//                                    cipher.init(Cipher.DECRYPT_MODE, keySpec);
+//
+//                                    for (HashMap<String, Set<HashMap<String, String>>> hashMap : getSet) {
+//                                        for (Map.Entry<String, Set<HashMap<String, String>>> set1 : hashMap.entrySet()) {
+//                                            if (set1.getKey().equals(extras.getString("email"))) {
+//
+//                                                for (HashMap<String, String> map2 : set1.getValue()) {
+//                                                    for (Map.Entry<String, String> map3 : map2.entrySet()) {
+//
+//                                                        Log.e("tag", "came to loop" + " " + map3.getKey() + " " + extras.getString("domain"));
+//                                                        if (map3.getKey().equals(extras.getString("domain"))) {
+//
+//                                                            Log.e("tag", "Came here");
+//
+//                                                            AlertDialog.Builder alertDialog = new AlertDialog.Builder(ImageActivity.this);
+//                                                            alertDialog.setMessage("Do you want to Autofill the password")
+//                                                                    .setCancelable(false)
+//                                                                    .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+//                                                                        @Override
+//                                                                        public void onClick(DialogInterface dialogInterface, int i) {
+//
+//                                                                            try {
+//                                                                                if (images.get(6).equals(Base64.getEncoder().encodeToString(cipher.doFinal(Base64.getDecoder().decode(map3.getValue()))))) {
+//                                                                                    Intent intent = new Intent(ImageActivity.this, HomeActivity.class);
+//                                                                                    startActivity(intent);
+//                                                                                }
+//                                                                            } catch (BadPaddingException | IllegalBlockSizeException e) {
+//                                                                                e.printStackTrace();
+//                                                                            }
+//
+//                                                                        }
+//                                                                    }).setNegativeButton("No", new DialogInterface.OnClickListener() {
+//                                                                        @Override
+//                                                                        public void onClick(DialogInterface dialogInterface, int i) {
+//
+//                                                                            Toast.makeText(ImageActivity.this, "Do it yourself", Toast.LENGTH_SHORT).show();
+//
+//                                                                        }
+//                                                                    });
+//
+//                                                            AlertDialog alert = alertDialog.create();
+//                                                            alert.setTitle("AlertDialogExample");
+//                                                            alert.show();
+//                                                            Log.e("Hash", set1.getKey() + "  " + Base64.getEncoder().encodeToString(cipher.doFinal(Base64.getDecoder().decode(map3.getValue()))));
+//                                                        }
+//                                                    }
+//                                                }
+//                                            }
+//                                        }
+//                                    }
+//
+//                                } catch (NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
+//                                    e.printStackTrace();
+//                                }
+//
                             }
                         });
 
@@ -154,7 +254,7 @@ public class ImageActivity extends AppCompatActivity {
         }
 
         button.setOnClickListener((View v) -> {
-            if (Global.getBytes().size() < 5) {
+            if (Global.getBytes().size() < 6) {
                 if (extras.getString("isNewUser").equals("true")) {
                     getBytes();
                 } else {
@@ -173,7 +273,7 @@ public class ImageActivity extends AppCompatActivity {
     @RequiresApi(api = Build.VERSION_CODES.O)
     private void showResult() {
 
-        if (Global.getBytes().size() == 5) {
+        if (Global.getBytes().size() == 6) {
 
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
@@ -191,11 +291,69 @@ public class ImageActivity extends AppCompatActivity {
                 MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
                 byte[] hash = messageDigest.digest(finalByteArray);
 
-                if (images.get(5).equals(Base64.getEncoder().encodeToString(hash))) {
+                if (images.get(6).equals(Base64.getEncoder().encodeToString(hash))) {
+
+//                    Bundle bundle = getIntent().getExtras();
+//
+//                    try {
+//                        SecretKeySpec keySpec = new SecretKeySpec(key, "AES");
+//                        Cipher cipher = Cipher.getInstance("AES");
+//                        cipher.init(Cipher.ENCRYPT_MODE, keySpec);
+//
+//                        SharedPreferences sh = getSharedPreferences("MySharedPref", MODE_PRIVATE);
+//                        SharedPreferences sharedPreferences = getSharedPreferences("MySharedPref", MODE_PRIVATE);
+//                        SharedPreferences.Editor editor = sharedPreferences.edit();
+//
+//                        Set<HashMap<String, HashMap<String, String>>> mainSet = new HashSet<>(sh.getStringSet("domain", (HashSet) new HashSet<>()));
+//                        editor.putString("email", bundle.getString("email"));
+//
+//                        HashMap<String, String> set = new HashMap<>();
+//                        set.put(bundle.getString("domain", ""), Base64.getEncoder().encodeToString(cipher.doFinal(hash)));
+//                        set.add(domains1);
+//
+//                        HashMap<String, Set<HashMap<String, String>>> childSet = new HashMap<>();
+//                        Log.e("tag", bundle.getString("email", ""));
+//                        childSet.put(bundle.getString("email", ""), set);
+//                        mainSet.add(childSet);
+//                        editor.putStringSet("domain", (HashSet) mainSet);
+//
+//                        Log.e("tag", sh.getStringSet("domain", new HashSet<>()).toString());
+//
+//                        Log.e("hash", Base64.getEncoder().encodeToString(hash));
+//
+//                        editor.apply();
+//
+//                        cipher.init(Cipher.DECRYPT_MODE, keySpec);
+//
+//                        Set<HashMap<String, Set<HashMap<String, String>>>> getSet = new HashSet<>();
+//                        getSet.addAll(sh.getStringSet("domain", (HashSet) new HashSet<HashMap<String, Set<HashMap<String, String>>>>()));
+//                        Log.e("hash", getSet.toString());
+//
+//                        for (HashMap<String, Set<HashMap<String, String>>> hashMap : getSet) {
+//                            for (Map.Entry<String, Set<HashMap<String, String>>> set1 : hashMap.entrySet()) {
+//                                if (set1.getKey().equals(bundle.getString("email"))) {
+//
+//                                    for (HashMap<String, String> map2 : set1.getValue()) {
+//                                        for (Map.Entry<String, String> map3 : map2.entrySet()) {
+//
+//                                            if (map3.getKey().equals(bundle.getString("domain"))) {
+//                                                Log.e("Hash", set1.getKey() + "  " + Base64.getEncoder().encodeToString(cipher.doFinal(Base64.getDecoder().decode(map3.getValue()))));
+//                                            }
+//                                        }
+//                                    }
+//                                }
+//                            }
+//                        }
+//
+//                    } catch (NoSuchPaddingException | InvalidKeyException | BadPaddingException | IllegalBlockSizeException e) {
+//                        e.printStackTrace();
+//                    }
+
                     Log.e("tag", "Correct");
                     Intent intent = new Intent(ImageActivity.this, HomeActivity.class);
                     startActivity(intent);
                 } else {
+                    Toast.makeText(this, "Wrong Password Please try again", Toast.LENGTH_SHORT).show();
                     Log.e("tag", "not Correct");
                 }
 
@@ -209,16 +367,26 @@ public class ImageActivity extends AppCompatActivity {
 
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
     private void checkBytes() {
 
         Log.e("tag", "clicked");
 
         ArrayList<String> selected = adapter.getSelected();
 
-        if (Global.getBytes().size() < 5) {
+        if (Global.getBytes().size() < 6) {
             Log.e("image", images.get(Global.getBytes().size()));
 
-            Global.addLink(selected.get(0));
+            try {
+                SecretKeySpec keySpec = new SecretKeySpec(key, "AES");
+                Cipher cipher = Cipher.getInstance("AES");
+                cipher.init(Cipher.ENCRYPT_MODE, keySpec);
+
+                Global.addLink(Base64.getEncoder().encodeToString(cipher.doFinal(selected.get(0).getBytes())));
+
+            } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e) {
+                e.printStackTrace();
+            }
 
             Runnable runnable = () -> {
                 try {
@@ -243,7 +411,7 @@ public class ImageActivity extends AppCompatActivity {
     }
 
     private void update() {
-        if (Global.getBytes().size() != 5) {
+        if (Global.getBytes().size() != 6) {
             selectedImageCount.setText(String.valueOf(Global.getBytes().size()));
             ImageActivity.this.recreate();
         }else {
@@ -257,12 +425,12 @@ public class ImageActivity extends AppCompatActivity {
 
         if (bytes.size() == 1) {
 
-            if (Global.getLinks().size() < 5) {
+            if (Global.getLinks().size() < 6) {
                 for (String link : Global.getLinks()) {
                     Log.e("link", link);
                 }
                 ImageActivity.this.recreate();
-            } else if (Global.getLinks().size() == 5) {
+            } else if (Global.getLinks().size() == 6) {
                 selectedImageCount.setText(String.valueOf(Global.getLinks().size()));
                 button.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_baseline_check_24));
             }
@@ -273,7 +441,7 @@ public class ImageActivity extends AppCompatActivity {
     @RequiresApi(api = Build.VERSION_CODES.O)
     private void generateFinalHash() {
 
-        if (Global.getBytes().size() == 5) {
+        if (Global.getBytes().size() == 6) {
 
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
@@ -344,7 +512,18 @@ public class ImageActivity extends AppCompatActivity {
                     }
 
                     if (bytes.size() == 1) {
-                        Global.addLink(selected.get(0));
+
+                        try {
+                            SecretKeySpec keySpec = new SecretKeySpec(key, "AES");
+                            Cipher cipher = Cipher.getInstance("AES");
+                            cipher.init(Cipher.ENCRYPT_MODE, keySpec);
+
+                            Global.addLink(Base64.getEncoder().encodeToString(cipher.doFinal(selected.get(0).getBytes())));
+
+                        } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e) {
+                            e.printStackTrace();
+                        }
+
                         ImageActivity.this.runOnUiThread(this::createHash);
                     }
                 } catch (ExecutionException | InterruptedException e) {

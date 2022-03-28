@@ -76,7 +76,7 @@ public class RegisterActivity extends AppCompatActivity {
                 progressBar.setVisibility(View.VISIBLE);
 
                 String mName = name.getText().toString().trim();
-                String mEmail = email.getText().toString().trim();
+                String mEmail = email.getText().toString().trim().toLowerCase();
                 String mDomain = domain.getText().toString().trim();
                 ArrayList<String> allDomain = new ArrayList<>();
 

@@ -59,7 +59,7 @@ public class MainActivity extends AppCompatActivity {
                 User user = app.currentUser();
                 ArrayList<com.example.passwordmanager.Model.User> details = new ArrayList<>();
 
-                String email = emailText.getText().toString().trim();
+                String email = emailText.getText().toString().trim().toLowerCase();
                 String domain = domainText.getText().toString().trim();
                 String emailPattern = "[a-zA-Z0-9._-]+@[a-z]+\\.+[a-z]+";
 
@@ -72,7 +72,7 @@ public class MainActivity extends AppCompatActivity {
 
                         MongoClient client = user.getMongoClient("mongodb-atlas");
                         MongoDatabase database = client.getDatabase("manager");
-                        Document filter = new Document().append("email", emailText.getText().toString().trim());
+                        Document filter = new Document().append("email", emailText.getText().toString().trim().toLowerCase());
 
                         database.getCollection("users").findOne(filter).getAsync(task -> {
                             if (task.isSuccess()) {

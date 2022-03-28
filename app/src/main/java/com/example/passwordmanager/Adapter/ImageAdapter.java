@@ -67,41 +67,18 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
 
             imageView = itemView.findViewById(R.id.imageTile);
 
-            imageView.setOnLongClickListener((View v) -> {
-                isSelected = true;
+            imageView.setOnClickListener((View v) -> {
 
                 if (selected.contains(arrayList.get(getAdapterPosition()))) {
                     selected.remove(arrayList.get(getAdapterPosition()));
                 } else {
                     selected.add(arrayList.get(getAdapterPosition()));
-
                 }
                 notifyDataSetChanged();
                 Log.e("Tag", selected.toString());
 
-                if (selected.size() == 0) {
-                    isSelected = false;
-                }
-                return true;
             });
 
-            imageView.setOnClickListener((View v) -> {
-
-                if (isSelected) {
-                    if (selected.contains(arrayList.get(getAdapterPosition()))) {
-                        selected.remove(arrayList.get(getAdapterPosition()));
-                    } else {
-                        selected.add(arrayList.get(getAdapterPosition()));
-
-                    }
-                    notifyDataSetChanged();
-                    Log.e("Tag", selected.toString());
-                }
-
-                if (selected.size() == 0) {
-                    isSelected = false;
-                }
-            });
         }
     }
 }
