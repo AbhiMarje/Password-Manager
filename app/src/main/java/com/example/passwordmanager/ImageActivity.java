@@ -22,6 +22,9 @@ import android.widget.Toast;
 import com.bumptech.glide.Glide;
 import com.example.passwordmanager.Adapter.ImageAdapter;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
+import org.apache.commons.codec.DecoderException;
+import org.apache.commons.codec.binary.Hex;
 import org.bson.Document;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -95,6 +98,7 @@ public class ImageActivity extends AppCompatActivity {
         Bundle extras = getIntent().getExtras();
         Log.e("tag", "new" + extras.getString("isNewUser"));
         Log.e("tag", "email" + extras.getString("email"));
+        Log.e("tag", "type" + extras.getString("type"));
 
         arrayList = new ArrayList<>();
         app = new App(new AppConfiguration.Builder(app_Id).build());
@@ -105,8 +109,18 @@ public class ImageActivity extends AppCompatActivity {
             if (user != null) {
                 MongoClient client = user.getMongoClient("mongodb-atlas");
                 MongoDatabase database = client.getDatabase("manager");
+                String collectionName = "images";
+                if (extras.getString("type").equals("Fruits")) {
+                    collectionName = "images";
+                }else if (extras.getString("type").equals("Chocolates")) {
+                    collectionName = "chocolate";
+                }else if (extras.getString("type").equals("Sports")) {
+                    collectionName = "sports";
+                }
 
-                RealmResultTask<MongoCursor<Document>> cursor = database.getCollection("images").find().iterator();
+                Log.e("tagC", collectionName);
+
+                RealmResultTask<MongoCursor<Document>> cursor = database.getCollection(collectionName).find().iterator();
                 cursor.getAsync(task -> {
                     if (task.isSuccess()) {
                         MongoCursor<Document> results = task.get();
@@ -114,7 +128,6 @@ public class ImageActivity extends AppCompatActivity {
                             Document currentDoc = results.next();
                             if (currentDoc.getString("pic") != null) {
                                 arrayList.add(currentDoc.getString("pic"));
-                                Log.e("tag", arrayList.toString());
                             } else {
                                 Log.e("tag", "Doc empty");
                             }
@@ -152,7 +165,11 @@ public class ImageActivity extends AppCompatActivity {
                                 if (i == 6) {
                                     images.add(encoded.get(i));
                                 }else {
-                                    images.add(new String(cipher.doFinal(Base64.getDecoder().decode(encoded.get(i)))));
+                                    try {
+                                        images.add(new String(cipher.doFinal(Hex.decodeHex(encoded.get(i)))));
+                                    } catch (DecoderException e) {
+                                        e.printStackTrace();
+                                    }
                                 }
                             }
 
@@ -160,7 +177,18 @@ public class ImageActivity extends AppCompatActivity {
                             e.printStackTrace();
                         }
 
-                        RealmResultTask<MongoCursor<Document>> cursor = database.getCollection("images").find().iterator();
+                        String collectionName = "images";
+                        if (task.get().getString(extras.getString("domain")+"Type").equals("Fruits")) {
+                            collectionName = "images";
+                        }else if (task.get().getString(extras.getString("domain")+"Type").equals("Chocolates")) {
+                            collectionName = "chocolate";
+                        }else if (task.get().getString(extras.getString("domain")+"Type").equals("Sports")) {
+                            collectionName = "sports";
+                        }
+
+                        Log.e("tagC", collectionName);
+
+                        RealmResultTask<MongoCursor<Document>> cursor = database.getCollection(collectionName).find().iterator();
                         cursor.getAsync(task1 -> {
                             if (task1.isSuccess()) {
                                 MongoCursor<Document> results = task1.get();
@@ -209,7 +237,11 @@ public class ImageActivity extends AppCompatActivity {
                                                     for (Map.Entry<String, String> map3 : map2.getValue().entrySet()) {
 
                                                         if (map3.getKey().equals(extras.getString("domain"))) {
-                                                            Log.e("hash2", Base64.getEncoder().encodeToString(cipher.doFinal(Base64.getDecoder().decode(map3.getValue()))));
+                                                            try {
+                                                                Log.e("hash2", Hex.encodeHexString(cipher.doFinal(Hex.decodeHex(map3.getValue()))));
+                                                            } catch (DecoderException e) {
+                                                                e.printStackTrace();
+                                                            }
                                                             Log.e("hash2", images.get(6));
 
                                                             AlertDialog.Builder alertDialog = new AlertDialog.Builder(ImageActivity.this);
@@ -220,11 +252,15 @@ public class ImageActivity extends AppCompatActivity {
                                                                         public void onClick(DialogInterface dialogInterface, int i) {
 
                                                                             try {
-                                                                                if (images.get(6).equals(Base64.getEncoder().encodeToString(cipher.doFinal(Base64.getDecoder().decode(map3.getValue()))))) {
-                                                                                    Intent intent = new Intent(ImageActivity.this, HomeActivity.class);
-                                                                                    startActivity(intent);
-                                                                                }else {
-                                                                                    Global.makeAutoFillFalse();
+                                                                                try {
+                                                                                    if (images.get(6).equals(Hex.encodeHexString(cipher.doFinal(Hex.decodeHex(map3.getValue()))))) {
+                                                                                        Intent intent = new Intent(ImageActivity.this, HomeActivity.class);
+                                                                                        startActivity(intent);
+                                                                                    }else {
+                                                                                        Global.makeAutoFillFalse();
+                                                                                    }
+                                                                                } catch (DecoderException e) {
+                                                                                    e.printStackTrace();
                                                                                 }
                                                                             } catch (BadPaddingException | IllegalBlockSizeException e) {
                                                                                 e.printStackTrace();
@@ -349,6 +385,7 @@ public class ImageActivity extends AppCompatActivity {
                 intent.putExtra("otp", String.valueOf(randomPin));
                 intent.putExtra("email", bundle.getString("email", ""));
                 intent.putExtra("domain", bundle.getString("domain", ""));
+                intent.putExtra("type", bundle.getString("type", ""));
                 startActivity(intent);
             }else {
                 Toast.makeText(ImageActivity.this, "Something went wrong", Toast.LENGTH_SHORT).show();
@@ -377,13 +414,16 @@ public class ImageActivity extends AppCompatActivity {
                 MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
                 byte[] hash = messageDigest.digest(finalByteArray);
 
-                if (images.get(6).equals(Base64.getEncoder().encodeToString(hash))) {
+                Log.e("image", images.get(6));
+                Log.e("imageHash", Hex.encodeHexString(hash));
+
+                if (images.get(6).equals(Hex.encodeHexString(hash))) {
 
                     Bundle bundle = getIntent().getExtras();
 
                     try {
 
-                        Log.e("hash", Base64.getEncoder().encodeToString(hash));
+                        Log.e("hash", Hex.encodeHexString(hash));
 
                         SecretKeySpec keySpec = new SecretKeySpec(key, "AES");
                         Cipher cipher = Cipher.getInstance("AES");
@@ -404,7 +444,7 @@ public class ImageActivity extends AppCompatActivity {
                         if (mainSet.size() == 0) {
                             Set<HashMap<String, HashMap<String, String>>> pushSet = new HashSet<>();
                             HashMap<String, HashMap<String, String>> newMap = new HashMap<>();
-                            childMap.put(bundle.getString("domain"), Base64.getEncoder().encodeToString(cipher.doFinal(hash)));
+                            childMap.put(bundle.getString("domain"), Hex.encodeHexString(cipher.doFinal(hash)));
                             newMap.put(bundle.getString("email"), childMap);
                             pushSet.add(newMap);
                             editor.putStringSet("domain", (HashSet) pushSet);
@@ -426,14 +466,18 @@ public class ImageActivity extends AppCompatActivity {
                                             }else {
                                                 isNewDomain = false;
                                             }
-                                            Log.e("hash2", Base64.getEncoder().encodeToString(decipher.doFinal(Base64.getDecoder().decode(map3.getValue()))));
+                                            try {
+                                                Log.e("hash2", Hex.encodeHexString(decipher.doFinal(Hex.decodeHex(map3.getValue()))));
+                                            } catch (DecoderException e) {
+                                                e.printStackTrace();
+                                            }
                                         }
                                     }
 
                                     if (isNewDomain) {
                                         Set<HashMap<String, HashMap<String, String>>> pushSet = new HashSet<>();
                                         HashMap<String, HashMap<String, String>> newMap = new HashMap<>();
-                                        childMap.put(bundle.getString("domain"), Base64.getEncoder().encodeToString(cipher.doFinal(hash)));
+                                        childMap.put(bundle.getString("domain"), Hex.encodeHexString(cipher.doFinal(hash)));
                                         newMap.put(bundle.getString("email"), childMap);
                                         pushSet.add(newMap);
                                         editor.putStringSet("domain", (HashSet) pushSet);
@@ -444,7 +488,7 @@ public class ImageActivity extends AppCompatActivity {
                             if (isNewUser) {
                                 Set<HashMap<String, HashMap<String, String>>> pushSet = new HashSet<>();
                                 HashMap<String, HashMap<String, String>> newMap = new HashMap<>();
-                                childMap.put(bundle.getString("domain"), Base64.getEncoder().encodeToString(cipher.doFinal(hash)));
+                                childMap.put(bundle.getString("domain"), Hex.encodeHexString(cipher.doFinal(hash)));
                                 newMap.put(bundle.getString("email"), childMap);
                                 pushSet.add(newMap);
                                 editor.putStringSet("domain", (HashSet) pushSet);
@@ -549,7 +593,7 @@ public class ImageActivity extends AppCompatActivity {
                 Cipher cipher = Cipher.getInstance("AES");
                 cipher.init(Cipher.ENCRYPT_MODE, keySpec);
 
-                Global.addLink(Base64.getEncoder().encodeToString(cipher.doFinal(selected.get(0).getBytes())));
+                Global.addLink(Hex.encodeHexString(cipher.doFinal(selected.get(0).getBytes())));
 
             } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e) {
                 e.printStackTrace();
@@ -629,7 +673,7 @@ public class ImageActivity extends AppCompatActivity {
 
                 Log.e("hash", Arrays.toString(hash));
 
-                hashValues.add(Base64.getEncoder().encodeToString(hash));
+                hashValues.add(Hex.encodeHexString(hash));
 
                 User user = app.currentUser();
                 MongoClient client = user.getMongoClient("mongodb-atlas");
@@ -656,7 +700,7 @@ public class ImageActivity extends AppCompatActivity {
                 if (bundle.getString("isReset", "").equals("true")) {
                     try {
 
-                        Log.e("hash", Base64.getEncoder().encodeToString(hash));
+                        Log.e("hash",   Hex.encodeHexString(hash));
 
                         SecretKeySpec keySpec = new SecretKeySpec(key, "AES");
                         Cipher cipher = Cipher.getInstance("AES");
@@ -677,7 +721,7 @@ public class ImageActivity extends AppCompatActivity {
                         if (mainSet.size() == 0) {
                             Set<HashMap<String, HashMap<String, String>>> pushSet = new HashSet<>();
                             HashMap<String, HashMap<String, String>> newMap = new HashMap<>();
-                            childMap.put(bundle.getString("domain"), Base64.getEncoder().encodeToString(cipher.doFinal(hash)));
+                            childMap.put(bundle.getString("domain"), Hex.encodeHexString(cipher.doFinal(hash)));
                             newMap.put(bundle.getString("email"), childMap);
                             pushSet.add(newMap);
                             editor.putStringSet("domain", (HashSet) pushSet);
@@ -699,14 +743,18 @@ public class ImageActivity extends AppCompatActivity {
                                             } else {
                                                 isNewDomain = false;
                                             }
-                                            Log.e("hash2", Base64.getEncoder().encodeToString(decipher.doFinal(Base64.getDecoder().decode(map3.getValue()))));
+                                            try {
+                                                Log.e("hash2", Hex.encodeHexString(decipher.doFinal(Hex.decodeHex(map3.getValue()))));
+                                            } catch (DecoderException e) {
+                                                e.printStackTrace();
+                                            }
                                         }
                                     }
 
                                     if (isNewDomain) {
                                         Set<HashMap<String, HashMap<String, String>>> pushSet = new HashSet<>();
                                         HashMap<String, HashMap<String, String>> newMap = new HashMap<>();
-                                        childMap.put(bundle.getString("domain"), Base64.getEncoder().encodeToString(cipher.doFinal(hash)));
+                                        childMap.put(bundle.getString("domain"), Hex.encodeHexString(cipher.doFinal(hash)));
                                         newMap.put(bundle.getString("email"), childMap);
                                         pushSet.add(newMap);
                                         editor.putStringSet("domain", (HashSet) pushSet);
@@ -717,7 +765,7 @@ public class ImageActivity extends AppCompatActivity {
                             if (isNewUser) {
                                 Set<HashMap<String, HashMap<String, String>>> pushSet = new HashSet<>();
                                 HashMap<String, HashMap<String, String>> newMap = new HashMap<>();
-                                childMap.put(bundle.getString("domain"), Base64.getEncoder().encodeToString(cipher.doFinal(hash)));
+                                childMap.put(bundle.getString("domain"), Hex.encodeHexString(cipher.doFinal(hash)));
                                 newMap.put(bundle.getString("email"), childMap);
                                 pushSet.add(newMap);
                                 editor.putStringSet("domain", (HashSet) pushSet);
@@ -767,7 +815,7 @@ public class ImageActivity extends AppCompatActivity {
                             Cipher cipher = Cipher.getInstance("AES");
                             cipher.init(Cipher.ENCRYPT_MODE, keySpec);
 
-                            Global.addLink(Base64.getEncoder().encodeToString(cipher.doFinal(selected.get(0).getBytes())));
+                            Global.addLink(Hex.encodeHexString(cipher.doFinal(selected.get(0).getBytes())));
 
                         } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e) {
                             e.printStackTrace();

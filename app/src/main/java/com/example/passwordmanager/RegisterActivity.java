@@ -6,7 +6,9 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ProgressBar;
+import android.widget.Spinner;
 import android.widget.Toast;
 
 import com.google.android.material.button.MaterialButton;
@@ -35,6 +37,8 @@ public class RegisterActivity extends AppCompatActivity {
     String isNewUser;
     TextInputLayout nameLayout;
     TextInputLayout emailLayout;
+    Spinner spinner;
+    String selectedImageType = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,6 +82,7 @@ public class RegisterActivity extends AppCompatActivity {
                 String mName = name.getText().toString().trim();
                 String mEmail = email.getText().toString().trim().toLowerCase();
                 String mDomain = domain.getText().toString().trim();
+                String mType = selectedImageType;
                 ArrayList<String> allDomain = new ArrayList<>();
 
                 if (mName.isEmpty()) {
@@ -89,11 +94,13 @@ public class RegisterActivity extends AppCompatActivity {
                 } else if (mDomain.isEmpty()) {
                     progressBar.setVisibility(View.GONE);
                     domain.setError("Please provide valid domain");
+                }else if (mType.isEmpty()) {
+                    Toast.makeText(this, "Please select a image type", Toast.LENGTH_SHORT).show();
                 } else {
 
                     allDomain.add(mDomain);
 
-                    Document document = new Document().append("name", mName).append("email", mEmail).append("domain", allDomain);
+                    Document document = new Document().append("name", mName).append("email", mEmail).append("domain", allDomain).append(mDomain+"Type", mType);
 
                     database.getCollection("users").insertOne(document).getAsync(task -> {
                         if (task.isSuccess()) {
@@ -103,6 +110,7 @@ public class RegisterActivity extends AppCompatActivity {
                             intent.putExtra("isNewUser", "true");
                             intent.putExtra("email", mEmail);
                             intent.putExtra("domain", mDomain);
+                            intent.putExtra("type", mType);
                             startActivity(intent);
                         } else {
                             progressBar.setVisibility(View.GONE);
@@ -118,9 +126,12 @@ public class RegisterActivity extends AppCompatActivity {
                 ArrayList<com.example.passwordmanager.Model.User> arrayList = new ArrayList<>();
 
                 String mDomain = domain.getText().toString().trim();
+                String mType = selectedImageType;
 
                 if (mDomain.isEmpty()) {
                     domain.setError("Please provide valid domain");
+                }else if (mType.isEmpty()) {
+                    Toast.makeText(this, "Please select image type", Toast.LENGTH_SHORT).show();
                 }else {
 
                     Document filter = new Document().append("email", extras.getString("email"));
@@ -135,7 +146,7 @@ public class RegisterActivity extends AppCompatActivity {
                             arrayList.get(0).getDomain().add(mDomain);
 
                             Document queryFilter = new Document().append("email", extras.getString("email"));
-                            Document newDocument = new Document("$set", new Document("domain", arrayList.get(0).getDomain()));
+                            Document newDocument = new Document("$set", new Document("domain", arrayList.get(0).getDomain()).append(mDomain+"Type", mType));
 
                             database.getCollection("users").updateOne(queryFilter, newDocument).getAsync(task1 -> {
                                 if (task1.isSuccess()) {
@@ -147,6 +158,7 @@ public class RegisterActivity extends AppCompatActivity {
                                         intent.putExtra("isNewUser", "true");
                                         intent.putExtra("email", extras.getString("email"));
                                         intent.putExtra("domain", mDomain);
+                                        intent.putExtra("type", mType);
                                         startActivity(intent);
                                     }else {
                                         Toast.makeText(this, "Failed to update", Toast.LENGTH_SHORT).show();
@@ -170,6 +182,18 @@ public class RegisterActivity extends AppCompatActivity {
 
         });
 
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                selectedImageType = adapterView.getSelectedItem().toString();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+
+            }
+        });
+
     }
 
     private void init() {
@@ -181,6 +205,7 @@ public class RegisterActivity extends AppCompatActivity {
         button = findViewById(R.id.res_next_btn);
         nameLayout = findViewById(R.id.textInputLayoutName);
         emailLayout = findViewById(R.id.textInputLayoutEmail);
+        spinner = findViewById(R.id.dropDown);
 
         progressBar.setVisibility(View.GONE);
 

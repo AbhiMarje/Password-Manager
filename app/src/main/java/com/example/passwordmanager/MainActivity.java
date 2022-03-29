@@ -87,12 +87,14 @@ public class MainActivity extends AppCompatActivity {
                                         intent.putExtra("isNewUser", "false");
                                         intent.putExtra("email", email);
                                         intent.putExtra("domain", domain);
+                                        intent.putExtra("type", task.get().getString(domain+"Type"));
                                         startActivity(intent);
                                     } else {
                                         Intent intent = new Intent(MainActivity.this, RegisterActivity.class);
                                         intent.putExtra("isNewUser", "false");
                                         intent.putExtra("email", email);
                                         intent.putExtra("domain", domain);
+                                        intent.putExtra("type", task.get().getString(domain+"Type"));
                                         startActivity(intent);
                                     }
 

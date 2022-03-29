@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">Password Manager</string>
+    <string name="country_prompt">Choose a image type</string>
+    <string-array name="types">
+        <item>Fruits</item>
+        <item>Chocolates</item>
+        <item>Sports</item>
+    </string-array>
 </resources>

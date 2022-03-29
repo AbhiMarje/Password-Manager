@@ -4,6 +4,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
@@ -31,6 +32,8 @@ public class OTPActivity extends AppCompatActivity {
                 Intent intent = new Intent(OTPActivity.this, ImageActivity.class);
                 intent.putExtra("email", bundle.getString("email", ""));
                 intent.putExtra("domain", bundle.getString("domain", ""));
+                intent.putExtra("type", bundle.getString("type", ""));
+                Log.e("ttt", bundle.getString("type", "ttt"));
                 intent.putExtra("isNewUser", "true");
                 intent.putExtra("isReset", "true");
                 startActivity(intent);
