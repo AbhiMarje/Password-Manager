@@ -19,6 +19,7 @@ import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import com.bumptech.glide.Glide;
 import com.example.passwordmanager.Adapter.ImageAdapter;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -26,8 +27,13 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
 import org.bson.Document;
+
+import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.net.URLConnection;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -112,9 +118,9 @@ public class ImageActivity extends AppCompatActivity {
                 String collectionName = "images";
                 if (extras.getString("type").equals("Fruits")) {
                     collectionName = "images";
-                }else if (extras.getString("type").equals("Chocolates")) {
+                } else if (extras.getString("type").equals("Chocolates")) {
                     collectionName = "chocolate";
-                }else if (extras.getString("type").equals("Sports")) {
+                } else if (extras.getString("type").equals("Sports")) {
                     collectionName = "sports";
                 }
 
@@ -164,7 +170,7 @@ public class ImageActivity extends AppCompatActivity {
                             for (int i = 0; i < encoded.size(); i++) {
                                 if (i == 6) {
                                     images.add(encoded.get(i));
-                                }else {
+                                } else {
                                     try {
                                         images.add(new String(cipher.doFinal(Hex.decodeHex(encoded.get(i)))));
                                     } catch (DecoderException e) {
@@ -178,11 +184,11 @@ public class ImageActivity extends AppCompatActivity {
                         }
 
                         String collectionName = "images";
-                        if (task.get().getString(extras.getString("domain")+"Type").equals("Fruits")) {
+                        if (task.get().getString(extras.getString("domain") + "Type").equals("Fruits")) {
                             collectionName = "images";
-                        }else if (task.get().getString(extras.getString("domain")+"Type").equals("Chocolates")) {
+                        } else if (task.get().getString(extras.getString("domain") + "Type").equals("Chocolates")) {
                             collectionName = "chocolate";
-                        }else if (task.get().getString(extras.getString("domain")+"Type").equals("Sports")) {
+                        } else if (task.get().getString(extras.getString("domain") + "Type").equals("Sports")) {
                             collectionName = "sports";
                         }
 
@@ -256,7 +262,7 @@ public class ImageActivity extends AppCompatActivity {
                                                                                     if (images.get(6).equals(Hex.encodeHexString(cipher.doFinal(Hex.decodeHex(map3.getValue()))))) {
                                                                                         Intent intent = new Intent(ImageActivity.this, HomeActivity.class);
                                                                                         startActivity(intent);
-                                                                                    }else {
+                                                                                    } else {
                                                                                         Global.makeAutoFillFalse();
                                                                                     }
                                                                                 } catch (DecoderException e) {
@@ -335,7 +341,7 @@ public class ImageActivity extends AppCompatActivity {
             });
 
             try {
-                randomPin = (int) (Math.random()*9000)+1000;
+                randomPin = (int) (Math.random() * 9000) + 1000;
                 Message message = new MimeMessage(session);
                 message.setFrom(new InternetAddress(email));
                 message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(extras.getString("email", "")));
@@ -387,7 +393,7 @@ public class ImageActivity extends AppCompatActivity {
                 intent.putExtra("domain", bundle.getString("domain", ""));
                 intent.putExtra("type", bundle.getString("type", ""));
                 startActivity(intent);
-            }else {
+            } else {
                 Toast.makeText(ImageActivity.this, "Something went wrong", Toast.LENGTH_SHORT).show();
             }
         }
@@ -461,9 +467,9 @@ public class ImageActivity extends AppCompatActivity {
                                     for (Map.Entry<String, String> map3 : map2.getValue().entrySet()) {
                                         childMap.put(map3.getKey(), map3.getValue());
                                         if (map3.getKey().equals(bundle.getString("domain"))) {
-                                            if (bundle.getString("isReset","").equals("true")) {
+                                            if (bundle.getString("isReset", "").equals("true")) {
                                                 isNewDomain = true;
-                                            }else {
+                                            } else {
                                                 isNewDomain = false;
                                             }
                                             try {
@@ -600,17 +606,15 @@ public class ImageActivity extends AppCompatActivity {
             }
 
             Runnable runnable = () -> {
-                try {
-                    Global.addBytes(Glide.with(this).as(byte[].class).load(selected.get(0)).submit().get());
-                    for (byte[] bytes : Global.getBytes()) {
-                        Log.e("bytes", Arrays.toString(bytes));
-                    }
 
-                    ImageActivity.this.runOnUiThread(this::update);
-
-                } catch (ExecutionException | InterruptedException e) {
-                    e.printStackTrace();
+                Global.addBytes(getByteArrayImage(selected.get(0)));
+                for (byte[] bytes : Global.getBytes()) {
+                    Log.e("bytes", Arrays.toString(bytes));
                 }
+
+                ImageActivity.this.runOnUiThread(this::update);
+
+
             };
             new Thread(runnable).start();
 
@@ -625,7 +629,7 @@ public class ImageActivity extends AppCompatActivity {
         if (Global.getBytes().size() != 6) {
             selectedImageCount.setText(String.valueOf(Global.getBytes().size()));
             ImageActivity.this.recreate();
-        }else {
+        } else {
             selectedImageCount.setText(String.valueOf(Global.getBytes().size()));
             button.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_baseline_check_24));
         }
@@ -700,7 +704,7 @@ public class ImageActivity extends AppCompatActivity {
                 if (bundle.getString("isReset", "").equals("true")) {
                     try {
 
-                        Log.e("hash",   Hex.encodeHexString(hash));
+                        Log.e("hash", Hex.encodeHexString(hash));
 
                         SecretKeySpec keySpec = new SecretKeySpec(key, "AES");
                         Cipher cipher = Cipher.getInstance("AES");
@@ -799,33 +803,31 @@ public class ImageActivity extends AppCompatActivity {
         if (selected.size() == 1) {
 
             Runnable runnable = () -> {
-                try {
-                    byte[] bytes1 = Glide.with(ImageActivity.this).as(byte[].class).load(selected.get(0)).submit().get();
-                    Global.addBytes(bytes1);
-                    bytes.add(bytes1);
 
-                    for (byte[] bytes : Global.getBytes()) {
-                        Log.e("byte", Arrays.toString(bytes));
-                    }
+                byte[] bytes1 = getByteArrayImage(selected.get(0));
+                Global.addBytes(bytes1);
+                bytes.add(bytes1);
 
-                    if (bytes.size() == 1) {
-
-                        try {
-                            SecretKeySpec keySpec = new SecretKeySpec(key, "AES");
-                            Cipher cipher = Cipher.getInstance("AES");
-                            cipher.init(Cipher.ENCRYPT_MODE, keySpec);
-
-                            Global.addLink(Hex.encodeHexString(cipher.doFinal(selected.get(0).getBytes())));
-
-                        } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e) {
-                            e.printStackTrace();
-                        }
-
-                        ImageActivity.this.runOnUiThread(this::createHash);
-                    }
-                } catch (ExecutionException | InterruptedException e) {
-                    e.printStackTrace();
+                for (byte[] bytes : Global.getBytes()) {
+                    Log.e("byte", Arrays.toString(bytes));
                 }
+
+                if (bytes.size() == 1) {
+
+                    try {
+                        SecretKeySpec keySpec = new SecretKeySpec(key, "AES");
+                        Cipher cipher = Cipher.getInstance("AES");
+                        cipher.init(Cipher.ENCRYPT_MODE, keySpec);
+
+                        Global.addLink(Hex.encodeHexString(cipher.doFinal(selected.get(0).getBytes())));
+
+                    } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e) {
+                        e.printStackTrace();
+                    }
+
+                    ImageActivity.this.runOnUiThread(this::createHash);
+                }
+
             };
             new Thread(runnable).start();
 
@@ -833,6 +835,27 @@ public class ImageActivity extends AppCompatActivity {
             Toast.makeText(this, "Please select 1 images", Toast.LENGTH_SHORT).show();
         }
         progressBar.setVisibility(View.GONE);
+    }
+
+    private byte[] getByteArrayImage(String url) {
+        try {
+            URL imageUrl = new URL(url);
+            URLConnection ucon = imageUrl.openConnection();
+
+            InputStream is = ucon.getInputStream();
+            BufferedInputStream bis = new BufferedInputStream(is);
+
+            ByteArrayOutputStream baf = new ByteArrayOutputStream(500);
+            int current = 0;
+            while ((current = bis.read()) != -1) {
+                baf.write((byte) current);
+            }
+
+            return baf.toByteArray();
+        } catch (Exception e) {
+            Log.d("ImageManager", "Error: " + e.toString());
+        }
+        return null;
     }
 
     private void init() {
