@@ -68,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
                 String domain = domainText.getText().toString().trim();
                 String emailPattern = "[a-zA-Z0-9._-]+@[a-z]+\\.+[a-z]+";
 
-                if (email.isEmpty() || !email.matches(emailPattern)) {
+                if (email.isEmpty()) {
                     emailText.setError("Please provide valid email");
                 }else if (domain.isEmpty()) {
                     domainText.setError("Please provide valid domain");
