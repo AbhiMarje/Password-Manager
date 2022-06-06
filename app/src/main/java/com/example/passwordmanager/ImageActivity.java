@@ -325,7 +325,7 @@ public class ImageActivity extends AppCompatActivity {
 
         forgetPassword.setOnClickListener((View v) -> {
             String email = "2gi19ec067@students.git.edu";
-            String password = "345@hb345@hb";
+            String password = "";
 
             Properties properties = new Properties();
             properties.put("mail.smtp.auth", "true");
